@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CareerMate – AI Career Assistant</title>
+<meta name="description" content="CareerMate web chat: tech news, internships, practice quizzes, ATS resume score, job search, roadmaps, PDF chat and YouTube notes.">
+<meta name="theme-color" content="#0a0f2e">
+<link rel="manifest" href="/app/manifest.webmanifest">
+<link rel="icon" href="/app/favicon.png">
+<link rel="apple-touch-icon" href="/app/icon-192.png">
+<style>
+:root{
+  --bg:#f3f6ff;--panel:#ffffff;--panel2:#eef2ff;--text:#0e1633;--muted:#5a6794;--line:#d9e0f7;
+  --accent:#0e7490;--accent-ink:#ffffff;--accent2:#b45309;--bot:#ffffff;--bot-ink:#0e1633;--user:#0e7490;--user-ink:#ffffff;
+  --ok:#15803d;--warn:#b45309;--err:#b91c1c;--shadow:0 6px 24px rgba(16,28,90,.10);--chip:#e6ecff;
+}
+:root[data-theme="dark"]{
+  --bg:#070b22;--panel:#0d1438;--panel2:#121b4d;--text:#e9edff;--muted:#9aa7da;--line:#222d70;
+  --accent:#00d4ff;--accent-ink:#04122e;--accent2:#ffd23f;--bot:#161f57;--bot-ink:#e9edff;--user:#00c3ec;--user-ink:#04122e;
+  --ok:#34d399;--warn:#fbbf24;--err:#fb7185;--shadow:0 6px 24px rgba(0,0,0,.35);--chip:#1a2563;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#070b22;--panel:#0d1438;--panel2:#121b4d;--text:#e9edff;--muted:#9aa7da;--line:#222d70;
+    --accent:#00d4ff;--accent-ink:#04122e;--accent2:#ffd23f;--bot:#161f57;--bot-ink:#e9edff;--user:#00c3ec;--user-ink:#04122e;
+    --ok:#34d399;--warn:#fbbf24;--err:#fb7185;--shadow:0 6px 24px rgba(0,0,0,.35);--chip:#1a2563;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:300px 1fr;height:100dvh;max-width:1400px;margin:0 auto;background:var(--panel);box-shadow:var(--shadow)}
+/* ---------- sidebar ---------- */
+.side{display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);min-height:0}
+.brand{display:flex;gap:12px;align-items:center;padding:18px 18px 14px}
+.brand img{width:44px;height:44px;border-radius:12px}
+.brand b{display:block;font-size:18px;letter-spacing:.2px}
+.brand span{font-size:12px;color:var(--muted)}
+.cmds{overflow:auto;padding:4px 10px 12px;flex:1}
+.grp{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--muted);padding:12px 10px 6px}
+.cmd{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:8px 10px}
+.cmd:hover,.cmd:focus-visible{background:var(--panel2)}
+.cmd i{font-style:normal;font-size:18px;width:24px;text-align:center;line-height:1.35}
+.cmd strong{display:block;font-size:14px}
+.cmd small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.sidefoot{padding:12px 14px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:7px 12px;font-size:13px}
+.btn:hover{border-color:var(--accent)}
+/* ---------- chat ---------- */
+.chat{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg);position:relative}
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.top .ttl{flex:1;min-width:0}
+.top .ttl b{display:block;font-size:16px}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.dot.busy{background:var(--warn);animation:pulse 1s infinite}
+.dot.off{background:var(--err)}
+@keyframes pulse{50%{opacity:.35}}
+.icon-btn{background:none;border:1px solid transparent;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;font-size:18px}
+.icon-btn:hover{background:var(--panel2)}
+.menu-btn{display:none}
+.stop{display:none;background:var(--err);color:#fff;border:0;border-radius:10px;padding:7px 14px;font-weight:600}
+.stop.on{display:block}
+.log{flex:1;overflow:auto;padding:16px 14px 8px;scroll-behavior:smooth}
+.row{display:flex;margin:6px 0;gap:8px;align-items:flex-end}
+.row.user{justify-content:flex-end}
+.avatar{width:30px;height:30px;border-radius:9px;flex:none}
+.bub{max-width:min(720px,86%);padding:9px 13px;border-radius:16px;background:var(--bot);color:var(--bot-ink);border:1px solid var(--line);overflow-wrap:anywhere;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.row.bot .bub{border-bottom-left-radius:5px}
+.row.user .bub{background:var(--user);color:var(--user-ink);border-color:transparent;border-bottom-right-radius:5px}
+.row.user .bub a{color:inherit}
+.bub code{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(127,127,160,.18);padding:1px 5px;border-radius:5px}
+.bub pre{margin:6px 0;padding:10px;background:rgba(127,127,160,.16);border-radius:10px;overflow:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+.bub pre code{background:none;padding:0}
+.time{display:block;text-align:right;font-size:11px;opacity:.6;margin-top:3px}
+.sys{align-self:center;text-align:center;color:var(--muted);font-size:12.5px;background:var(--panel2);border-radius:999px;padding:5px 14px;margin:8px auto;max-width:90%}
+.sys.err{color:var(--err)}
+.file{display:flex;gap:12px;align-items:center;min-width:240px}
+.file .ic{width:42px;height:48px;border-radius:8px;background:var(--panel2);display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--accent);border:1px solid var(--line);flex:none}
+.file .meta{min-width:0;flex:1}
+.file .meta b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .meta small{color:inherit;opacity:.7}
+.file .acts{display:flex;gap:8px;margin-top:6px}
+.file .acts a{font-size:13px;font-weight:600;text-decoration:none;padding:4px 12px;border-radius:8px;background:var(--accent);color:var(--accent-ink)}
+.cap{margin-top:8px}
+.bub img.pic{display:block;max-width:100%;max-height:420px;border-radius:10px;cursor:zoom-in}
+.menu-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.menu-card button{display:flex;gap:8px;align-items:flex-start;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.menu-card button:hover{border-color:var(--accent)}
+.menu-card i{font-style:normal}
+.menu-card b{display:block;font-size:13px}
+.menu-card small{display:block;font-size:11.5px;color:var(--muted);line-height:1.3}
+.typing{display:flex;gap:4px;padding:4px 2px}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.jump{position:absolute;right:18px;bottom:128px;display:none;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+.jump.on{display:grid}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:4px 14px 6px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+.chip:hover{border-color:var(--accent)}
+.comp{display:flex;gap:8px;align-items:flex-end;padding:8px 12px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line)}
+.comp textarea{flex:1;resize:none;max-height:150px;min-height:42px;padding:10px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;line-height:1.4}
+.comp textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+.send{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-size:19px;display:grid;place-items:center;flex:none}
+.send:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:11.5px;color:var(--muted);text-align:center;padding:0 12px 6px;background:var(--panel)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:9px 16px;border-radius:10px;font-size:13.5px;z-index:50;display:none;max-width:90vw}
+.drop{position:absolute;inset:0;background:rgba(0,180,230,.18);border:3px dashed var(--accent);display:none;place-items:center;font-size:20px;font-weight:700;z-index:20;pointer-events:none}
+.chat.dragging .drop{display:grid}
+.gate{position:fixed;inset:0;background:rgba(5,8,25,.78);display:none;place-items:center;z-index:60;padding:16px}
+.gate.on{display:grid}
+.gate form{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:360px;width:100%;box-shadow:var(--shadow)}
+.gate input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit;margin:10px 0}
+.gate .go{width:100%;border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px;font-weight:700}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;place-items:center;z-index:70;padding:16px}
+.lightbox.on{display:grid}
+.lightbox img{max-width:100%;max-height:100%;border-radius:10px}
+/* ---------- phone layout ---------- */
+.scrim{display:none}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;z-index:40;inset:0 auto 0 0;width:min(86vw,340px);transform:translateX(-102%);transition:transform .22s ease;box-shadow:var(--shadow)}
+  .side.open{transform:none}
+  .scrim.on{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30}
+  .menu-btn{display:grid}
+  .menu-card{grid-template-columns:1fr}
+  .bub{max-width:92%}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side" aria-label="Commands">
+    <div class="brand"><img src="/app/logo.png" alt=""><div><b>CareerMate</b><span>Your AI career assistant</span></div></div>
+    <nav class="cmds" id="cmds"></nav>
+    <div class="sidefoot">
+      <button class="btn" id="themeBtn" type="button">🌓 Theme</button>
+      <button class="btn" id="clearBtn" type="button">🧹 Clear screen</button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="chat" id="chat">
+    <header class="top">
+      <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open command list">☰</button>
+      <img class="avatar" src="/app/logo.png" alt="" style="width:36px;height:36px">
+      <div class="ttl"><b>CareerMate</b><span class="status"><i class="dot" id="dot"></i><span id="statusTxt">Online</span></span></div>
+      <button class="stop" id="stopBtn" type="button">■ Stop</button>
+      <button class="icon-btn" id="menuCmd" type="button" aria-label="Show the command menu" title="Command menu">⌘</button>
+    </header>
+    <div class="log" id="log" role="log" aria-live="polite" aria-label="Conversation"></div>
+    <button class="icon-btn jump" id="jump" type="button" aria-label="Jump to latest">↓</button>
+    <div class="chips" id="chips"></div>
+    <form class="comp" id="comp" autocomplete="off">
+      <input type="file" id="file" accept=".pdf,.docx,.txt" hidden>
+      <button class="icon-btn" id="attach" type="button" aria-label="Attach a PDF, DOCX or TXT file" title="Attach resume / PDF">📎</button>
+      <textarea id="box" rows="1" placeholder="Type a message or a command like /news …" maxlength="2000" aria-label="Message"></textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send">➤</button>
+    </form>
+    <div class="hint">Enter to send · Shift+Enter for a new line · 📎 to upload your resume or a PDF</div>
+    <div class="drop">Drop a PDF / DOCX / TXT to upload</div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="lightbox" id="lightbox"><img alt="Preview" id="lbImg"></div>
+<div class="gate" id="gate"><form id="gateForm"><b style="font-size:17px">🔒 Access code</b><p style="margin:6px 0 0;color:var(--muted);font-size:13.5px">This CareerMate web app is private. Enter the access code to chat.</p><input id="gateInput" type="password" placeholder="Access code" autocomplete="off" required><button class="go" type="submit">Continue</button></form></div>
+
+<script>
+"use strict";
+(() => {
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d = null) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+/* ---------------- the commands (same 16 as WhatsApp) ---------------- */
+const GROUPS = [
+  ["Discover", [
+    ["⚡", "/news", "", "Top tech news", false],
+    ["🏆", "/competitions", "", "Contests & hackathons", false],
+    ["💼", "/internships", "", "Fresh internships", false]]],
+  ["Learn & practise", [
+    ["📝", "/practice", "", "20-question quiz by topic", false],
+    ["🗺️", "/roadmap", "<topic>", "Official or AI roadmap", true],
+    ["📋", "/pyq", "", "Previous-year papers & interview Qs", false],
+    ["📚", "/books", "", "Free tech books (PDF)", false],
+    ["📺", "/utube_notes", "<link>", "Notes from a YouTube video", true],
+    ["📄", "/chat_pdf", "", "Ask questions about your PDF", false]]],
+  ["Career tools", [
+    ["🎯", "/ats", "<role>", "ATS score for your resume", true],
+    ["📄", "/send", "", "Upload or review your resume", false],
+    ["🔍", "/job_search", "<role>", "Open roles with a match score", true],
+    ["💬", "/assistance", "", "Ask any career question", false]]],
+  ["Session", [
+    ["💬", "/feedback", "", "Share your feedback", false],
+    ["🚫", "/cancel", "", "Stop what is running", false],
+    ["🗑️", "/delete", "", "Clear saved resume & session", false]]]
+];
+const ICONS = {}; GROUPS.forEach(g => g[1].forEach(c => ICONS[c[1]] = c));
+
+/* ---------------- state ---------------- */
+function newSid() {
+  const a = new Uint8Array(24); (crypto || window.msCrypto).getRandomValues(a);
+  return btoa(String.fromCharCode(...a)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+let sid = store.get("cm_sid"); if (!sid || !/^[A-Za-z0-9_-]{24,64}$/.test(sid)) { sid = newSid(); store.set("cm_sid", sid); }
+let cursor = parseInt(store.get("cm_cursor", "0"), 10) || 0;
+let history = []; try { history = JSON.parse(store.get("cm_hist", "[]")) || []; } catch (e) { history = []; }
+let cfg = {access_code: false, max_upload_mb: 10, max_text: 2000};
+let busy = false, awaiting = false, online = true, lastBotText = "";
+let code = store.get("cm_code", "");
+
+const log = $("log"), box = $("box");
+
+/* ---------------- text -> safe HTML (WhatsApp markup) ---------------- */
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+function fmt(text) {
+  const blocks = [];
+  let t = String(text).replace(/```([\s\S]*?)```/g, (m, c) => { blocks.push("<pre><code>" + esc(c.replace(/^\n/, "")) + "</code></pre>"); return "\u0000B" + (blocks.length - 1) + "\u0000"; });
+  const codes = [];
+  t = t.replace(/`([^`\n]+)`/g, (m, c) => { codes.push("<code>" + esc(c) + "</code>"); return "\u0000C" + (codes.length - 1) + "\u0000"; });
+  t = esc(t);
+  t = t.replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g, (u) => '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + u + "</a>");
+  t = t.replace(/\*\*([^\n*][^\n]*?)\*\*/g, "<b>$1</b>");
+  t = t.replace(/(^|[\s(>])\*([^\s*](?:[^*\n]*?[^\s*])?)\*(?=$|[\s).,!?:;<])/g, "$1<b>$2</b>");
+  t = t.replace(/(^|[\s(>])_([^\s_](?:[^_\n]*?[^\s_])?)_(?=$|[\s).,!?:;<])/g, "$1<i>$2</i>");
+  t = t.replace(/(^|[\s(>])~([^\s~](?:[^~\n]*?[^\s~])?)~(?=$|[\s).,!?:;<])/g, "$1<s>$2</s>");
+  t = t.replace(/\n/g, "<br>");
+  t = t.replace(/\u0000C(\d+)\u0000/g, (m, i) => codes[+i]).replace(/\u0000B(\d+)\u0000/g, (m, i) => blocks[+i]);
+  return t.replace(/<br>(<pre>)/g, "$1").replace(/(<\/pre>)<br>/g, "$1");
+}
+const hhmm = (ts) => new Date(ts).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+const size = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+
+/* ---------------- rendering ---------------- */
+function nearBottom() { return log.scrollHeight - log.scrollTop - log.clientHeight < 160; }
+function toBottom(force) { if (force || nearBottom()) { log.scrollTop = log.scrollHeight; $("jump").classList.remove("on"); } else $("jump").classList.add("on"); }
+
+function menuCard(text) {
+  const rows = [];
+  text.split("\n").forEach((ln) => {
+    const m = ln.match(/^(\S+)\s+(\/[a-z_]+)(\s+<[^>]+>)?\s*-\s*(.+?)\s*$/i);
+    if (m) rows.push({icon: m[1], cmd: m[2], arg: (m[3] || "").trim(), desc: m[4].replace(/\(e\.g\..*\)/, "").trim()});
+  });
+  if (rows.length < 6) return null;
+  const wrap = document.createElement("div");
+  wrap.innerHTML = '<b>🤖 CareerMate commands</b><div style="color:var(--muted);font-size:13px;margin-top:2px">Tap a command to start.</div>';
+  const grid = document.createElement("div"); grid.className = "menu-card";
+  rows.forEach((r) => {
+    const b = document.createElement("button"); b.type = "button";
+    b.innerHTML = "<i>" + esc(r.icon) + "</i><span><b>" + esc(r.cmd) + (r.arg ? " " + esc(r.arg) : "") + "</b><small>" + esc(r.desc) + "</small></span>";
+    b.addEventListener("click", () => runCommand(r.cmd, !!r.arg));
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid); return wrap;
+}
+
+function addRow(m, animate = true) {
+  const row = document.createElement("div"); row.className = "row " + (m.who === "user" ? "user" : "bot");
+  if (m.who === "sys") { const d = document.createElement("div"); d.className = "sys" + (m.err ? " err" : ""); d.textContent = m.text; log.appendChild(d); return d; }
+  if (m.who === "bot") { const av = document.createElement("img"); av.className = "avatar"; av.src = "/app/logo.png"; av.alt = ""; row.appendChild(av); }
+  const bub = document.createElement("div"); bub.className = "bub";
+  if (m.type === "document") {
+    const ext = ((m.name || "").split(".").pop() || "FILE").slice(0, 4).toUpperCase();
+    const f = document.createElement("div"); f.className = "file";
+    const url = m.file ? "/api/web/file/" + encodeURIComponent(m.file) : "";
+    f.innerHTML = '<div class="ic">' + esc(ext) + '</div><div class="meta"><b title="' + esc(m.name || "") + '">' + esc(m.name || "file") + "</b><small>" + (m.size ? size(m.size) : "") + "</small>" +
+      (url ? '<div class="acts"><a href="' + url + '" target="_blank" rel="noopener">Open</a><a href="' + url + '?dl=1" download>Download</a></div>' : "") + "</div>";
+    bub.appendChild(f);
+    if (m.caption) { const c = document.createElement("div"); c.className = "cap"; c.innerHTML = fmt(m.caption); bub.appendChild(c); }
+  } else if (m.type === "image") {
+    const src = m.file ? "/api/web/file/" + encodeURIComponent(m.file) : (m.url || "");
+    if (src) {
+      const img = document.createElement("img"); img.className = "pic"; img.alt = (m.caption || "image").slice(0, 80); img.loading = "lazy"; img.referrerPolicy = "no-referrer"; img.src = src;
+      img.addEventListener("click", () => { $("lbImg").src = src; $("lightbox").classList.add("on"); });
+      img.addEventListener("error", () => img.remove());
+      bub.appendChild(img);
+    }
+    if (m.caption) { const c = document.createElement("div"); c.className = "cap"; c.innerHTML = fmt(m.caption); bub.appendChild(c); }
+  } else {
+    const mc = m.who === "bot" ? (/CareerMate Command Menu/.test(m.text) ? menuCard(m.text) : null) : null;
+    if (mc) bub.appendChild(mc); else bub.innerHTML = fmt(m.text);
+  }
+  const tm = document.createElement("span"); tm.className = "time"; tm.textContent = hhmm(m.ts || Date.now()); bub.appendChild(tm);
+  row.appendChild(bub); log.appendChild(row); return row;
+}
+
+function persist() {
+  history = history.slice(-150);
+  store.set("cm_hist", JSON.stringify(history)); store.set("cm_cursor", String(cursor));
+}
+function pushMsg(m, render = true) {
+  history.push(m); persist();
+  if (render) { const stick = nearBottom() || m.who === "user"; removeTyping(); addRow(m); if (awaiting || busy) showTyping(); toBottom(stick); }
+}
+let typingEl = null;
+function showTyping() {
+  if (typingEl) return;
+  typingEl = document.createElement("div"); typingEl.className = "row bot";
+  typingEl.innerHTML = '<img class="avatar" src="/app/logo.png" alt=""><div class="bub"><div class="typing" aria-label="CareerMate is typing"><span></span><span></span><span></span></div></div>';
+  log.appendChild(typingEl); toBottom(false);
+}
+function removeTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } }
+function setBusy(b) {
+  busy = b; const on = busy || awaiting;
+  $("dot").className = "dot" + (!online ? " off" : on ? " busy" : "");
+  $("statusTxt").textContent = !online ? "Reconnecting…" : on ? "Working on it…" : "Online";
+  $("stopBtn").classList.toggle("on", on);
+  if (on) showTyping(); else removeTyping();
+}
+
+/* ---------------- contextual quick replies ---------------- */
+function renderChips() {
+  const c = $("chips"); c.innerHTML = "";
+  const add = (label, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = label; b.addEventListener("click", fn); c.appendChild(b); };
+  const t = lastBotText || "";
+  if (/Reply with A, B, C, or D|reply with the option letter/i.test(t) && !/Quiz Completed|Test Ended/i.test(t)) {
+    ["A", "B", "C", "D"].forEach((l) => add(l, () => send(l))); add("Exit quiz", () => send("exit")); return;
+  }
+  if (/Upload PDF\/DOCX resume|upload your resume|Please upload your resume/i.test(t)) { add("📎 Attach resume", () => $("file").click()); add("Cancel", () => send("/cancel")); return; }
+  if (/upload a PDF|send.*PDF to chat|send me a PDF/i.test(t)) { add("📎 Attach PDF", () => $("file").click()); add("Cancel", () => send("/cancel")); return; }
+  if (/CareerMate Command Menu/i.test(t) || !t) { ["/news", "/practice", "/ats", "/job_search", "/roadmap", "/assistance"].forEach((x) => add(x, () => runCommand(x, !!ICONS[x][4]))); return; }
+  add("Menu", () => send("/menu")); add("Cancel", () => send("/cancel"));
+}
+
+/* ---------------- network ---------------- */
+const headers = () => Object.assign({"Content-Type": "application/json"}, code ? {"X-Access-Code": code} : {});
+function toast(msg, ms = 3500) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => (t.style.display = "none"), ms); }
+function needCode() { if (cfg.access_code) { $("gate").classList.add("on"); setTimeout(() => $("gateInput").focus(), 50); } }
+
+async function post(url, init) {
+  const r = await fetch(url, init);
+  if (r.status === 401) { store.del("cm_code"); code = ""; needCode(); throw new Error("Access code required"); }
+  if (!r.ok) { let d = ""; try { d = (await r.json()).detail; } catch (e) {} throw new Error(d || ("Request failed (" + r.status + ")")); }
+  return r.json();
+}
+async function send(text) {
+  text = (text || "").trim(); if (!text) return;
+  if (text.length > cfg.max_text) { toast("Message too long (max " + cfg.max_text + " characters)."); return; }
+  if (cfg.access_code && !code) { needCode(); return; }
+  pushMsg({who: "user", text, ts: Date.now()});
+  awaiting = true; setBusy(busy);
+  try { await post("/api/web/send", {method: "POST", headers: headers(), body: JSON.stringify({sid, text})}); lastAck = Date.now(); }
+  catch (e) { awaiting = false; setBusy(false); pushMsg({who: "sys", text: "⚠️ " + e.message, err: true}); }
+}
+async function upload(file) {
+  if (!file) return;
+  const okExt = /\.(pdf|docx|txt)$/i.test(file.name);
+  if (!okExt) { toast("Please choose a PDF, DOCX or TXT file."); return; }
+  if (file.size > cfg.max_upload_mb * 1048576) { toast("File too large (max " + cfg.max_upload_mb + " MB)."); return; }
+  if (cfg.access_code && !code) { needCode(); return; }
+  pushMsg({who: "user", type: "document", name: file.name, size: file.size, ts: Date.now()});
+  awaiting = true; setBusy(busy);
+  const fd = new FormData(); fd.append("sid", sid); fd.append("file", file);
+  try {
+    const r = await fetch("/api/web/upload", {method: "POST", body: fd, headers: code ? {"X-Access-Code": code} : {}});
+    if (r.status === 401) { store.del("cm_code"); code = ""; needCode(); throw new Error("Access code required"); }
+    if (!r.ok) { let d = ""; try { d = (await r.json()).detail; } catch (e) {} throw new Error(d || "Upload failed"); }
+    lastAck = Date.now();
+  } catch (e) { awaiting = false; setBusy(false); pushMsg({who: "sys", text: "⚠️ " + e.message, err: true}); }
+}
+function runCommand(cmd, needsArg) {
+  closeSide();
+  if (needsArg) { box.value = cmd + " "; box.focus(); autosize(); toast("Add the details after " + cmd + " and press Enter", 2600); }
+  else send(cmd);
+}
+
+let polling = false, lastAck = 0;
+async function pollLoop() {
+  if (polling) return; polling = true; let fails = 0;
+  for (;;) {
+    const started = Date.now();
+    try {
+      const r = await fetch("/api/web/poll?sid=" + encodeURIComponent(sid) + "&after=" + cursor + "&wait=20", {cache: "no-store"});
+      if (!r.ok) throw new Error("poll " + r.status);
+      const d = await r.json();
+      online = true; fails = 0;
+      if (d.last < cursor) cursor = d.last;                 // the server restarted: start counting again
+      for (const it of d.items) {
+        cursor = Math.max(cursor, it.id);
+        if (it.type === "text") lastBotText = it.text;
+        pushMsg({who: "bot", ts: it.ts, type: it.type, text: it.text, file: it.file, url: it.url, name: it.name, size: it.size, caption: it.caption});
+      }
+      if (d.items.length) { persist(); renderChips(); }
+      if (!d.busy && started > lastAck) awaiting = false;    // only trust "idle" from a poll that began after our message was accepted
+      setBusy(d.busy);
+    } catch (e) {
+      fails++; online = false; setBusy(busy);
+      await new Promise((res) => setTimeout(res, Math.min(8000, 1000 * fails)));
+    }
+  }
+}
+
+/* ---------------- UI wiring ---------------- */
+function buildSidebar() {
+  const nav = $("cmds");
+  GROUPS.forEach(([name, items]) => {
+    const h = document.createElement("div"); h.className = "grp"; h.textContent = name; nav.appendChild(h);
+    items.forEach(([ic, cmd, arg, desc, needs]) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "cmd";
+      b.innerHTML = "<i>" + ic + "</i><span><strong>" + cmd + (arg ? " " + esc(arg) : "") + "</strong><small>" + desc + "</small></span>";
+      b.addEventListener("click", () => runCommand(cmd, needs)); nav.appendChild(b);
+    });
+  });
+}
+function closeSide() { $("side").classList.remove("open"); $("scrim").classList.remove("on"); }
+function autosize() { box.style.height = "auto"; box.style.height = Math.min(150, box.scrollHeight) + "px"; }
+function setTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
+function welcome() {
+  const w = {who: "bot", ts: Date.now(), type: "text", text: "👋 *Welcome to CareerMate!*\nI'm your AI career assistant. I can fetch tech news, internships and competitions, run practice quizzes, score your resume for ATS, search jobs, build roadmaps, find free books and past papers, chat with your PDFs and turn YouTube videos into notes.\n\nTap a command on the left (or the ⌘ button), or just type a question after sending /assistance.\n\n🤖 *CareerMate Command Menu*\n" +
+    GROUPS.flatMap(g => g[1]).map(c => c[0] + " " + c[1] + (c[2] ? " " + c[2] : "") + " - " + c[3]).join("\n")};
+  return w;
+}
+function renderHistory() {
+  log.innerHTML = "";
+  if (!history.length) { history.push(welcome()); persist(); }
+  history.forEach((m) => addRow(m, false));
+  const lastTxt = [...history].reverse().find((m) => m.who === "bot" && m.type === "text"); lastBotText = lastTxt ? lastTxt.text : "";
+  toBottom(true); renderChips();
+}
+
+$("comp").addEventListener("submit", (e) => { e.preventDefault(); const v = box.value; box.value = ""; autosize(); send(v); });
+box.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("comp").requestSubmit(); } });
+box.addEventListener("input", autosize);
+$("attach").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; upload(f); });
+$("stopBtn").addEventListener("click", () => { fetch("/api/web/send", {method: "POST", headers: headers(), body: JSON.stringify({sid, text: "/cancel"})}).catch(() => {}); });
+$("menuBtn").addEventListener("click", () => { $("side").classList.add("open"); $("scrim").classList.add("on"); });
+$("scrim").addEventListener("click", closeSide);
+$("menuCmd").addEventListener("click", () => send("/menu"));
+$("jump").addEventListener("click", () => toBottom(true));
+log.addEventListener("scroll", () => { if (nearBottom()) $("jump").classList.remove("on"); });
+$("lightbox").addEventListener("click", () => $("lightbox").classList.remove("on"));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { $("lightbox").classList.remove("on"); closeSide(); } });
+$("themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const n = cur === "dark" ? "light" : "dark"; setTheme(n); store.set("cm_theme", n);
+});
+$("clearBtn").addEventListener("click", () => { history = []; cursor = cursor; persist(); lastBotText = ""; renderHistory(); closeSide(); });
+$("gateForm").addEventListener("submit", (e) => { e.preventDefault(); code = $("gateInput").value.trim(); store.set("cm_code", code); $("gate").classList.remove("on"); toast("Access code saved. Send your message again."); });
+const chatEl = $("chat"); let dragN = 0;
+chatEl.addEventListener("dragenter", (e) => { e.preventDefault(); dragN++; chatEl.classList.add("dragging"); });
+chatEl.addEventListener("dragleave", () => { dragN = Math.max(0, dragN - 1); if (!dragN) chatEl.classList.remove("dragging"); });
+chatEl.addEventListener("dragover", (e) => e.preventDefault());
+chatEl.addEventListener("drop", (e) => { e.preventDefault(); dragN = 0; chatEl.classList.remove("dragging"); const f = e.dataTransfer.files[0]; if (f) upload(f); });
+document.addEventListener("paste", (e) => { const f = e.clipboardData && e.clipboardData.files && e.clipboardData.files[0]; if (f) upload(f); });
+
+/* ---------------- start ---------------- */
+(async function init() {
+  setTheme(store.get("cm_theme"));
+  buildSidebar(); renderHistory();
+  try { cfg = Object.assign(cfg, await (await fetch("/api/web/config")).json()); } catch (e) {}
+  if (cfg.enabled === false) { pushMsg({who: "sys", text: "The web chat is switched off on this server.", err: true}); return; }
+  if (cfg.access_code && !code) needCode();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/app/sw.js", {scope: "/app/"}).catch(() => {});
+  pollLoop(); box.focus();
+})();
+})();
+</script>
+</body>
+</html>

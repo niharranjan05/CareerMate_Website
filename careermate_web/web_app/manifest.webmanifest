@@ -1,0 +1,14 @@
+{
+  "name": "CareerMate – AI Career Assistant",
+  "short_name": "CareerMate",
+  "description": "Tech news, internships, quizzes, ATS resume score, job search, roadmaps, PDF chat and YouTube notes.",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#0a0f2e",
+  "theme_color": "#0a0f2e",
+  "icons": [
+    {"src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
